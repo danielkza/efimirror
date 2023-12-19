@@ -106,7 +106,7 @@ AmbientCapabilities=
 CapabilityBoundingSet=CAP_CHOWN,CAP_SETFID
 EOF
 
-boot_efi_unit_name=$(systemd--escape --path "@boot_efi_dir@")
+boot_efi_unit_name=$(systemd-escape --path "@boot_efi_dir@")
 
 for partuuid in "${efi_partitions[@]}"; do
   mount_path="${MOUNT_BASE}/${partuuid}"
