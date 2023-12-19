@@ -142,4 +142,4 @@ Options=$MOUNT_OPTS
 EOF
 done
 
-(cd "$generator_dir/local-fs.target.requires"; ln -s "../"${boot_efi_unit_name}"" .)
+(cd "$generator_dir/local-fs.target.requires"; ln -s "../${boot_efi_unit_name}.mount" .)
