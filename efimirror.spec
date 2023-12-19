@@ -23,6 +23,8 @@ Requires: systemd >= 249
 Requires: efibootmgr
 Requires: bash
 
+BuildArch: noarch
+
 %description
 EFI Partition Redundancy
 
