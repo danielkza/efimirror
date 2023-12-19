@@ -16,7 +16,7 @@ env_file_path = conf_env_dir / 'efimirror'
 
 generator_conf_data = configuration_data({
   'boot_efi_dir': get_option('boot-efi-dir'),
-  'env_file_path': get_option('prefix') / get_option('sysconfdir') / 'default' / 'efimirror',
+  'env_file_path': env_file_path,
   'sync_script_path': libexec_dir / 'efimirror-sync',
 })
 
