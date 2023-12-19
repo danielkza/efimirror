@@ -30,7 +30,9 @@ EFI Partition Redundancy
 %forgesetup
 
 %build
-%meson -D"systemd-generator-dir=%{_systemdgeneratordir}"
+%meson \
+  -D"systemd-generator-dir=%{_systemdgeneratordir}" \
+  -D"config-env-dir=%{_sysconfdir}/sysconfig/"
 %meson_build
 
 %install
@@ -46,3 +48,4 @@ EFI Partition Redundancy
 %doc README.md
 %{_libexecdir}/%{pkgname}/*
 %{_systemdgeneratordir}/*
+%config(noreplace) %{_sysconfdir}/sysconfig/%{pkgname}

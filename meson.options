@@ -20,3 +20,13 @@ option('systemd-generator-dir',
   type: 'string',
   value: 'lib/systemd/system-generators',
   description: 'Path to install systemd generator')
+
+option('default-mount-opts',
+  type: 'string',
+  value: 'rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro',
+  description: 'Default EFI partition mount options')
+
+option('config-env-dir',
+  type: 'string',
+  value: '',
+  description: 'Path to store env file for configuration, defaults to {sysconfdir]/default')

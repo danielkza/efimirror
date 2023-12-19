@@ -1,0 +1,2 @@
+MOUNT_OPTS="@default_mount_opts@"
+MOUNT_BASE="@boot_efi_instance_dir@"
