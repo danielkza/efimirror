@@ -4,6 +4,8 @@
 
 %forgemeta
 
+%global debug_package %{nil}
+
 Name:           %{pkgname}
 Version:        0.1
 Release:        1%{?dist}
