@@ -120,7 +120,7 @@ for partuuid in "${efi_partitions[@]}"; do
   (cd "$generator_dir/local-fs.target.requires"; ln -s "../${mount_unit_name}.mount" .)
 
   if [[ "$partuuid" == "$cur_efi_partuuid" ]]; then
-    cat > "${generator_dir}/"${boot_efi_unit_name}"" <<EOF
+    cat > "${generator_dir}/${boot_efi_unit_name}.mount" <<EOF
 [Mount]
 What=$mount_path
 Where=@boot_efi_dir@
