@@ -1,0 +1,22 @@
+option('boot-efi-dir',
+  type : 'string',
+  value : '/boot/efi',
+  description : 'Path to system boot EFI directory (usually /boot/efi)'
+)
+
+option('boot-efi-instance-dir',
+  type : 'string',
+  value : '/boot/efis',
+  description : 'Path to mount EFI partition instances in'
+)
+
+option('lsyncd-exe',
+  type : 'string',
+  value : 'lsyncd',
+  description : 'Name of lsyncd executable'
+)
+
+option('systemd-generator-dir',
+  type: 'string',
+  value: 'lib/systemd/system-generators',
+  description: 'Path to install systemd generator')

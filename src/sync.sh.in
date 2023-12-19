@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+dest_dir="$1"
+test -d "$dest_dir"
+
+config_file=$(mktemp)
+cat > $config_file <<EOF
+sync {
+    default.direct,
+    source  = "@boot_efi_dir@/",
+    target  = "$dest_dir/"
+}
+EOF
+
+exec "@lsyncd_exe@" -insist -nodaemon "$config_file"

@@ -1,0 +1,145 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+SYNC_COMMAND="@sync_script_path@"
+
+source "@env_file_path@"
+
+test -v MOUNT_OPTS
+test -v MOUNT_BASE
+
+generator_dir="$1"
+
+print() {
+  echo "efimirror-generator:" "$@" >> /dev/kmsg
+}
+
+find_efi_partitions() {
+  local line props found=0
+  while read -r line; do
+    # lsblk output is properly shell quoted
+    declare -a "props=($line)" || continue
+    declare "${props[@]}" || continue
+    [ "${FSTYPE}" = vfat ] || continue
+    [ "${PARTTYPE,,}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ] || continue
+    echo "$PARTUUID"
+    found=1
+  done < <(lsblk -o FSTYPE,PARTTYPE,PARTUUID --pairs --shell)
+
+  if [ $found != 1 ]; then
+    return 1
+  fi
+  return 0
+}
+
+efibootmgr_parse_dev_partuuid() {
+  if [[ "$1" =~ HD\([0-9]+,GPT,([[:xdigit:]-]+),.*\) ]]; then
+    echo "${BASH_REMATCH[1]}"
+  else
+    return 1
+  fi
+}
+
+efibootmgr_get_current_boot_dev_partuuid() {
+  local line boot_current elm partuuid
+  while read -r line; do
+    elm="${line#'BootCurrent: '}"
+    [ "$elm" != "$line" ] || return 1
+    boot_current="$elm"
+
+    while read -r line; do
+      elm="${line#"Boot${boot_current}"}"
+      [ "$elm" != "$line" ] || continue
+      if partuuid=$(efibootmgr_parse_dev_partuuid "$elm"); then
+        echo "$partuuid"
+        return 0
+      else
+        return 1
+      fi
+    done
+  done < <(efibootmgr)
+
+  return 1
+}
+
+efi_partitions=($(find_efi_partitions | sort -u))
+for partuuid in "${efi_partitions[@]}"; do
+  print "Found EFI partition: $partuuid"
+done
+
+cur_efi_partuuid=$(efibootmgr_get_current_boot_dev_partuuid)
+if ! [[ "${efi_partitions[@]}" =~ "$cur_efi_partuuid" ]]; then
+  print "Warning: current boot partition ${cur_efi_partuuid} not found, picking from available boot partitions instead"
+  cur_efi_partuuid="${efi_partitions[0]}"
+fi
+
+print "Active EFI partition: $cur_efi_partuuid"
+
+mkdir -p "${generator_dir}/local-fs.target.requires"
+
+mount_unit_prefix=$(systemd-escape --path "$MOUNT_BASE")
+
+cat > "${generator_dir}/efimirror@.service" <<EOF
+[Unit]
+BindsTo=${mount_unit_prefix}-%i.mount
+After=${mount_unit_prefix}-%i.mount
+Requires=boot-efi.mount
+After=boot-efi.mount
+RefuseManualStart=true
+RefuseManualStop=true
+
+[Service]
+Type=simple
+ExecStart=$SYNC_COMMAND ${MOUNT_BASE}/%I
+
+ProtectSystem=strict
+ReadWritePaths=${MOUNT_BASE}/%I
+ProtectHome=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+PrivateTmp=yes
+PrivateMounts=yes
+NoNewPrivileges=yes
+AmbientCapabilities=
+CapabilityBoundingSet=CAP_CHOWN,CAP_SETFID
+EOF
+
+boot_efi_unit_name=$(systemd--escape --path "@boot_efi_dir@")
+
+for partuuid in "${efi_partitions[@]}"; do
+  mount_path="${MOUNT_BASE}/${partuuid}"
+  mount_unit_name=$(systemd-escape --path "$mount_path")
+
+  dev_path="/dev/disk/by-partuuid/${partuuid}"
+  dev_unit_name=$(systemd-escape --path "$dev_path")
+
+  partuuid_unit_name=$(systemd-escape --path "$partuuid")
+
+  (cd "$generator_dir/local-fs.target.requires"; ln -s "../${mount_unit_name}.mount" .)
+
+  if [[ "$partuuid" == "$cur_efi_partuuid" ]]; then
+    cat > "${generator_dir}/"${boot_efi_unit_name}"" <<EOF
+[Mount]
+What=$mount_path
+Where=@boot_efi_dir@
+Type=none
+Options=bind
+EOF
+  else
+  cat > "${generator_dir}/${mount_unit_name}.mount" <<EOF
+[Unit]
+Upholds=efimirror@${partuuid_unit_name}.service
+EOF
+  fi
+  cat >> "${generator_dir}/${mount_unit_name}.mount" <<EOF
+[Mount]
+What=$dev_path
+Where=$mount_path
+Type=vfat
+Options=$MOUNT_OPTS
+EOF
+done
+
+(cd "$generator_dir/local-fs.target.requires"; ln -s "../"${boot_efi_unit_name}"" .)
