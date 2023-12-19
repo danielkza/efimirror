@@ -1,6 +1,6 @@
 %define pkgname efimirror
 %global forgeurl https://github.com/danielkza/%{pkgname}
-Version:        0.1
+%global branch master
 
 %forgemeta
 
@@ -10,7 +10,7 @@ Summary:        EFI Partition Redundancy
 License:        GPL-2.0
 
 URL:            %{forgeurl}
-Source0:        %{forgesource}
+Source:         %{forgesource}
 
 BuildRequires: meson
 BuildRequires: systemd-rpm-macros
