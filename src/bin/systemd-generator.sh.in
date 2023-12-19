@@ -128,7 +128,7 @@ Type=none
 Options=bind
 EOF
   else
-  cat > "${generator_dir}/${mount_unit_name}.mount" <<EOF
+    cat > "${generator_dir}/${mount_unit_name}.mount" <<EOF
 [Unit]
 Upholds=efimirror@${partuuid_unit_name}.service
 EOF
