@@ -5,6 +5,7 @@
 %forgemeta
 
 Name:           %{pkgname}
+Version:        0.1
 Release:        1%{?dist}
 Summary:        EFI Partition Redundancy
 License:        GPL-2.0
@@ -19,6 +20,9 @@ Requires: lsyncd
 Requires: systemd >= 249
 Requires: efibootmgr
 Requires: bash
+
+%description
+EFI Partition Redundancy
 
 %prep
 %forgesetup
@@ -38,5 +42,5 @@ Requires: bash
 %files
 %license LICENSE
 %doc README.md
-%{_libexec}/%{pkgname}/*
+%{_libexecdir}/%{pkgname}/*
 %{_systemdgeneratordir}/*

@@ -10,8 +10,6 @@
 __pycache__
 /.coverage/
 /.coveragerc
-/install dir
-/work area
 
 /meson-test-run.txt
 /meson-test-run.xml
@@ -32,3 +30,4 @@ packagecache
 
 *.pyc
 /*venv*
+/*.tar.gz

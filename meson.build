@@ -22,5 +22,15 @@ generator_exe = configure_file(input : 'src/systemd-generator.sh.in',
   output : 'efimirror-mount-generator', install_dir: libexec_dir, install_mode: 'rwxr-xr-x',
   configuration : generator_conf_data)
 
-install_symlink('efimirror-mount-generator', install_dir: get_option('systemd-generator-dir'),
-  pointing_to: join_paths(libexec_dir, 'efimirror-mount-generator'))
+
+# Make sure symlink is relative for RPM
+generator_install_dir = join_paths(get_option('prefix'), get_option('systemd-generator-dir'))
+generator_link_target = run_command(
+    'realpath', '-m', '--relative-to', generator_install_dir,
+    join_paths(libexec_dir, 'efimirror-mount-generator'),
+    check: true,
+  ).stdout().strip()
+
+install_symlink('efimirror-mount-generator', install_dir: generator_install_dir,
+  pointing_to: generator_link_target
+)
