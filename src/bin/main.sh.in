@@ -8,11 +8,22 @@ source "@functions_path@"
 # shellcheck source=/dev/null
 source "$EFIMIRROR_CONFIG_PATH"
 
-cmd="$1"
+cmd="${1:-}"
 shift || :
+
+usage() {
+  echo "Usage: $0 enroll <part-uuid>" >&2
+  echo "Usage: $0 unenroll <part-uuid>" >&2
+  echo "Usage: $0 status" >&2
+}
 
 case "$cmd" in
 enroll)
+  if [ $# -ne 1 ]; then
+    usage
+    exit 1
+  fi
+
   partuuid="$1"
 
   readarray -t user_efi_partitions < <(get_configured_efi_partitions)
@@ -31,6 +42,11 @@ enroll)
   systemctl daemon-reload
 ;;
 unenroll)
+  if [ $# -ne 1 ]; then
+    usage
+    exit 1
+  fi
+
   partuuid="$1"
 
   readarray -t user_efi_partitions < <(get_configured_efi_partitions)
@@ -49,6 +65,11 @@ unenroll)
   systemctl daemon-reload
 ;;
 status)
+  if [ $# -ne 0 ]; then
+    usage
+    exit 1
+  fi
+
   if ! read -r -a efi_partitions < <(get_efi_partitions | sort -u); then
     print "Error: no EFI partitions found, exiting"
     exit 1
@@ -72,10 +93,8 @@ status)
   exit 0
 ;;
 *)
+  usage
 
-  echo "Usage: $0 enroll <part-uuid>" >&2
-  echo "Usage: $0 unenroll <part-uuid>" >&2
-  echo "Usage: $0 status" >&2
   if [ "$cmd" == "--help" ]; then
     exit 0
   else
