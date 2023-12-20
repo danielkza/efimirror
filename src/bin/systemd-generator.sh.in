@@ -16,30 +16,12 @@ test -v MOUNT_BASE
 generator_dir="$1"
 early_generator_dir="$2"
 
-print() {
-  echo "efimirror-generator:" "$@" >> /dev/kmsg
-}
-
 if ! readarray -t efi_partitions < <(get_efi_partitions); then
   print "Error: no EFI partitions found, exiting"
   exit 1
 fi
 
-for partuuid in "${efi_partitions[@]}"; do
-  print "EFI partition: $partuuid"
-done
-
-if ! cur_efi_partuuid=$(efibootmgr_get_current_boot_dev_partuuid); then
-  print "Warning: failed to determine current boot partition. picking from available boot partitions instead"
-  cur_efi_partuuid="${efi_partitions[0]}"
-elif ! [[ "${efi_partitions[*]}" == *"$cur_efi_partuuid"* ]]; then
-  print "Warning: current boot partition ${cur_efi_partuuid} not found, picking from available boot partitions instead"
-  cur_efi_partuuid="${efi_partitions[0]}"
-else
-  print "Active current EFI partition: $cur_efi_partuuid"
-fi
-
-print "Selected Default EFI partition: $cur_efi_partuuid"
+print_status "${efi_partitions[@]}"
 
 mkdir -p "${generator_dir}/local-fs.target.requires"
 

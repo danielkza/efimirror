@@ -101,3 +101,32 @@ efibootmgr_get_current_boot_dev_partuuid() {
 
   return 1
 }
+
+print() {
+  if [ "${SYSTEMD_SCOPE:-}" = system ]; then
+    echo "efimirror-generator:" "$@" >> /dev/kmsg
+  else
+    echo "$@" >&2
+  fi
+}
+
+print_status() {
+  local partuuid cur_efi_partuuid
+  local -a efi_partitions=("$@")
+
+  for partuuid in "${efi_partitions[@]}"; do
+    print "EFI partition: $partuuid"
+  done
+
+  if ! cur_efi_partuuid=$(efibootmgr_get_current_boot_dev_partuuid); then
+    print "Warning: failed to determine current boot partition. picking from available boot partitions instead"
+    cur_efi_partuuid="${efi_partitions[0]}"
+  elif ! [[ "${efi_partitions[*]}" == *"$cur_efi_partuuid"* ]]; then
+    print "Warning: current boot partition ${cur_efi_partuuid} not found, picking from available boot partitions instead"
+    cur_efi_partuuid="${efi_partitions[0]}"
+  else
+    print "Active current EFI partition: $cur_efi_partuuid"
+  fi
+
+  print "Selected Default EFI partition: $cur_efi_partuuid"
+}
