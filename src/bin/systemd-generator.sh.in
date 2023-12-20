@@ -20,7 +20,7 @@ print() {
   echo "efimirror-generator:" "$@" >> /dev/kmsg
 }
 
-if ! read -r -a efi_partitions < <(get_efi_partitions | sort -u); then
+if ! readarray -t efi_partitions < <(get_efi_partitions); then
   print "Error: no EFI partitions found, exiting"
   exit 1
 fi
