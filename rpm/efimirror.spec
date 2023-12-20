@@ -50,7 +50,6 @@ EFI Partition Redundancy
 %build
 %meson \
   -D"systemd-generator-dir=%{_systemdgeneratordir}" \
-  -D"config-env-dir=%{_sysconfdir}/sysconfig/"
 %meson_build
 
 %install
