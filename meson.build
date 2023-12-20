@@ -50,7 +50,7 @@ bin_conf_data = configuration_data({
 })
 
 configure_file(input: 'src/bin/main.sh.in',
-  output: 'efimirrorr', install_dir: get_option('bindir'), install_mode: 'rwxr-xr-x',
+  output: 'efimirror', install_dir: get_option('bindir'), install_mode: 'rwxr-xr-x',
   configuration: bin_conf_data)
 
 
