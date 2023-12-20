@@ -72,4 +72,4 @@ fi
 %doc README.md
 %{_libexecdir}/%{pkgname}/*
 %{_systemdgeneratordir}/*
-%config(noreplace) %{_sysconfdir}/sysconfig/%{pkgname}
+%config(noreplace) %{_sysconfdir}/%{pkgname}/*
