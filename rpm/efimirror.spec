@@ -13,7 +13,7 @@ Summary:        EFI Partition Redundancy
 License:        GPL-2.0
 
 URL:            %{forgeurl}
-Source:         %{forgesource}
+Source0:        %{forgesource}
 
 BuildRequires: meson
 BuildRequires: systemd-rpm-macros

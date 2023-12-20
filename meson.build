@@ -7,7 +7,7 @@ sync_conf_data = configuration_data({
 
 libexec_dir = get_option('prefix') / get_option('libexecdir') / 'efimirror'
 
-sync_exe = configure_file(input: 'src/bin/sync.sh.in',
+configure_file(input: 'src/bin/sync.sh.in',
   output: 'efimirror-sync', install_dir: libexec_dir, install_mode: 'rwxr-xr-x',
   configuration: sync_conf_data)
 
@@ -20,7 +20,7 @@ generator_conf_data = configuration_data({
   'sync_script_path': libexec_dir / 'efimirror-sync',
 })
 
-generator_exe = configure_file(input: 'src/bin/systemd-generator.sh.in',
+configure_file(input: 'src/bin/systemd-generator.sh.in',
   output: 'efimirror-mount-generator', install_dir: libexec_dir, install_mode: 'rwxr-xr-x',
   configuration: generator_conf_data)
 
@@ -41,6 +41,6 @@ conf_conf_data = configuration_data({
   'boot_efi_instance_dir': get_option('boot-efi-instance-dir'),
 })
 
-conf_file = configure_file(input: 'src/conf/efimirror.in',
+configure_file(input: 'src/conf/efimirror.in',
   output: 'efimirror', install_dir: conf_env_dir, install_mode: 'rw-r--r--',
   configuration: conf_conf_data)

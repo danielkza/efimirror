@@ -2,16 +2,40 @@
 
 set -eu -o pipefail
 
-dest_dir="$1"
-test -d "$dest_dir"
+EFI_DIR="@boot_efi_dir@"
+
+cmd="$1"
+dest_dir="$2"
+
+if ! test -d "$dest_dir"; then
+  echo "Error: dest dir ${dest_dir} is not a directory" >&2
+  exit 1
+fi
 
 config_file=$(mktemp)
-cat > $config_file <<EOF
+cat >$config_file <<EOF
 sync {
-    default.direct,
-    source  = "@boot_efi_dir@/",
-    target  = "$dest_dir/"
+  default.direct,
+  source  = "${EFI_DIR}/",
+  target  = "${dest_dir}/"
 }
 EOF
 
-exec "@lsyncd_exe@" -insist -nodaemon "$config_file"
+case "$cmd" in
+sync)
+  exec "@lsyncd_exe@" -insist -nodaemon "$config_file"
+  ;;
+shutdown)
+  # if somehow /boot/efi was unmounted, don't try to sync or we will wipe
+  # a perfectly fine copy
+  if ! mountpoint -q "$EFI_DIR"; then
+    echo "Error: ${EFI_DIR} is unmounted, or was never mounted, stopping" >&2
+    exit 1
+  fi
+  exec "@lsyncd_exe@" -onepass "$config_file"
+  ;;
+*)
+  echo "Error: invalid command $cmd" >&2
+  exit 1
+  ;;
+esac

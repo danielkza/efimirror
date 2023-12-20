@@ -6,6 +6,7 @@
 /.cproject
 /.idea
 /.vscode
+*.code-workspace
 
 __pycache__
 /.coverage/
@@ -22,6 +23,7 @@ __pycache__
 packagecache
 /MANIFEST
 /build
+/builddir
 /dist
 /meson.egg-info
 

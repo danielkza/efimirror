@@ -91,7 +91,8 @@ RefuseManualStop=true
 
 [Service]
 Type=simple
-ExecStart=$SYNC_COMMAND ${MOUNT_BASE}/%I
+ExecStart=$SYNC_COMMAND sync ${MOUNT_BASE}/%I
+ExecStop=$SYNC_COMMAND shutdown ${MOUNT_BASE}/%I
 
 ProtectSystem=strict
 ReadWritePaths=${MOUNT_BASE}/%I
