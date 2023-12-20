@@ -1,4 +1,4 @@
-%define pkgname efimirror
+%global pkgname efimirror
 %global repourl https://github.com/danielkza/%{pkgname}
 
 %global debug_package %{nil}
@@ -14,18 +14,19 @@ URL: %{repourl}
 # For OBS, dont be smart with naming artifacts for git refs
 %if %{?_obs:1}%{!?_obs:0}
 
-Source0: %{pkgname}-%{version}.tar.gz
+%global archivename %{pkgname}-%{version}
+Source0: %{archivename}.tar.gz
 %else
 
 %if %{?commit:1}%{!?commit:0}
-%define gitref %{commit}
+%global gitref %{commit}
 %elif %{?gittag:1}%{!?gittag:0}
-%define gitref %{gittag}
+%global gitref %{gittag}
 %else
-%define gitref master
+%global gitref master
 %endif
 
-%define archivename %{pkgname}-%{gitref}
+%global archivename %{pkgname}-%{gitref}
 Source0: %{repourl}/archive/%{gitref}/%{archivename}.tar.gz
 
 %endif
