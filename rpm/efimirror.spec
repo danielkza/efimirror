@@ -12,7 +12,7 @@ License:        GPL-2.0
 URL: %{repourl}
 
 # For OBS, dont be smart with naming artifacts for git refs
-%if %{?_project:1}%{!?_project:0}
+%if %{?_obs:1}%{!?_obs:0}
 
 Source0: %{pkgname}-%{version}.tar.gz
 %else
