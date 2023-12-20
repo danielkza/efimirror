@@ -1,7 +1,13 @@
 rebuild_master:
   steps:
+    - trigger_services:
+        project: home:danielkza:efimirror
+        package: efimirror
     - rebuild_package:
         project: home:danielkza:efimirror
         package: efimirror
   filters:
     event: push
+    branches:
+      only:
+        - master
