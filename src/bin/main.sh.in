@@ -99,4 +99,3 @@ status)
     exit 1
   fi
 esac
-
