@@ -45,6 +45,15 @@ install_symlink('efimirror-mount-generator', install_dir: generator_install_dir,
   pointing_to: generator_link_target
 )
 
+bin_conf_data = configuration_data({
+  'functions_path' : functions_path,
+})
+
+configure_file(input: 'src/bin/main.sh.in',
+  output: 'efimirrorr', install_dir: get_option('bindir'), install_mode: 'rwxr-xr-x',
+  configuration: bin_conf_data)
+
+
 conf_conf_data = configuration_data({
   'default_mount_opts' : get_option('default-mount-opts'),
   'boot_efi_instance_dir': get_option('boot-efi-instance-dir'),

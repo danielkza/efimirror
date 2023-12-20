@@ -70,6 +70,7 @@ fi
 %files
 %license LICENSE
 %doc README.md
+%{_bindir}//*
 %{_libexecdir}/%{pkgname}/*
 %{_systemdgeneratordir}/*
 %config(noreplace) %{_sysconfdir}/%{pkgname}/*
