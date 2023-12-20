@@ -4,6 +4,7 @@ set -eu -o pipefail
 
 SYNC_COMMAND="@sync_script_path@"
 
+# shellcheck source=/dev/null
 source "@env_file_path@"
 
 test -v MOUNT_OPTS
@@ -16,13 +17,15 @@ print() {
 }
 
 find_efi_partitions() {
-  local line props found=0
+  local line props found=0 pt
   while read -r line; do
     # lsblk output is properly shell quoted
     declare -a "props=($line)" || continue
     declare "${props[@]}" || continue
-    [ "${FSTYPE}" = vfat ] || continue
-    [ "${PARTTYPE,,}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ] || continue
+    [ "${FSTYPE:-}" = vfat ] || continue
+    pt="${PARTTYPE:-}"
+    [ "${pt,,}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ] || continue
+    [ -n "${PARTUUID:-}" ] || continue
     echo "$PARTUUID"
     found=1
   done < <(lsblk -o FSTYPE,PARTTYPE,PARTUUID --pairs --shell)
@@ -63,13 +66,13 @@ efibootmgr_get_current_boot_dev_partuuid() {
   return 1
 }
 
-efi_partitions=($(find_efi_partitions | sort -u))
+read -r -a efi_partitions < <(find_efi_partitions | sort -u)
 for partuuid in "${efi_partitions[@]}"; do
   print "Found EFI partition: $partuuid"
 done
 
 cur_efi_partuuid=$(efibootmgr_get_current_boot_dev_partuuid)
-if ! [[ "${efi_partitions[@]}" =~ "$cur_efi_partuuid" ]]; then
+if ! [[ "${efi_partitions[*]}" == *"$cur_efi_partuuid"* ]]; then
   print "Warning: current boot partition ${cur_efi_partuuid} not found, picking from available boot partitions instead"
   cur_efi_partuuid="${efi_partitions[0]}"
 fi
@@ -114,7 +117,6 @@ for partuuid in "${efi_partitions[@]}"; do
   mount_unit_name=$(systemd-escape --path "$mount_path")
 
   dev_path="/dev/disk/by-partuuid/${partuuid}"
-  dev_unit_name=$(systemd-escape --path "$dev_path")
 
   partuuid_unit_name=$(systemd-escape --path "$partuuid")
 

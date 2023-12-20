@@ -11,4 +11,5 @@ repos:
     rev: v0.9.0
     hooks:
       - id: shellcheck
+        args: ['--external-sources']
         verbose: true
