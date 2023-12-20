@@ -1,24 +1,26 @@
 %define pkgname efimirror
-%global forgeurl https://github.com/danielkza/%{pkgname}
-%global branch master
-
-%forgemeta
+%global repourl https://github.com/danielkza/%{pkgname}
 
 %global debug_package %{nil}
 
 Name:           %{pkgname}
-Version:        0.1
+Version:        0.1.0
 Release:        1%{?dist}
 Summary:        EFI Partition Redundancy
 License:        GPL-2.0
 
-URL:            %{forgeurl}
-%if "%{?_project}" == ""
-Source0:        %{forgesource}
+URL: %{repourl}
+
+%if %{?commit:1}%{!?commit:0}
+%define gitref %{commit}
+%elif %{?gittag:1}%{!?gittag:0}
+%define gitref %{gittag}
 %else
-Source0: %{name}-%{version}.tar.gz
+%define gitref master
 %endif
 
+%define archivename %{pkgname}-%{gitref}
+Source0: %{repourl}/archive/%{gitref}/%{archivename}.tar.gz
 
 BuildRequires: meson
 BuildRequires: systemd-rpm-macros
@@ -34,7 +36,7 @@ BuildArch: noarch
 EFI Partition Redundancy
 
 %prep
-%forgesetup
+%autosetup -n %{archivename}
 
 %build
 %meson \
