@@ -17,4 +17,3 @@ repos:
     rev: v0.0.1
     hooks:
     - id: rpmlint
-      additional_dependencies: [rpmdyn]

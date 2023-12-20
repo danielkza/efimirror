@@ -9,6 +9,10 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: python-rpm
+        version: 1.0
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v2
       with:
