@@ -28,8 +28,8 @@ find_system_efi_partitions() {
 
 get_configured_efi_partitions() {
   local line partuuid
-  if ! [ -f "${EFIMIRROR_PART_CONFIG}" ]; then
-    return 0
+  if ! [ -f "${EFIMIRROR_PART_CONFIG_PATH}" ]; then
+    return 1
   fi
 
   local ret=1
@@ -40,7 +40,7 @@ get_configured_efi_partitions() {
       ret=0
       echo "$line"
     fi
-  done < "$EFIMIRROR_PART_CONFIG"
+  done < "$EFIMIRROR_PART_CONFIG_PATH"
 
   return "$ret"
 }
