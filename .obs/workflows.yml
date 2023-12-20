@@ -1,7 +1,7 @@
 rebuild_master:
   steps:
     - rebuild_package:
-      project: home:danielkza:efimirror
-      package: efimirror
+        project: home:danielkza:efimirror
+        package: efimirror
   filters:
     event: push
