@@ -11,6 +11,12 @@ License:        GPL-2.0
 
 URL: %{repourl}
 
+# For OBS, dont be smart with naming artifacts for git refs
+%if %{?_project:1}%{!?_project:0}
+
+Source0: %{pkgname}-%{version}.tar.gz
+%else
+
 %if %{?commit:1}%{!?commit:0}
 %define gitref %{commit}
 %elif %{?gittag:1}%{!?gittag:0}
@@ -21,6 +27,8 @@ URL: %{repourl}
 
 %define archivename %{pkgname}-%{gitref}
 Source0: %{repourl}/archive/%{gitref}/%{archivename}.tar.gz
+
+%endif
 
 BuildRequires: meson
 BuildRequires: systemd-rpm-macros
