@@ -32,8 +32,8 @@ packagecache
 
 *.pyc
 /*venv*
-/*.tar.gz
 
 /results_*
 *.rpm
 *.deb
+*.tar.gz

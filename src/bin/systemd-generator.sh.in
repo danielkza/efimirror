@@ -4,69 +4,23 @@ set -eu -o pipefail
 
 SYNC_COMMAND="@sync_script_path@"
 
+# shellcheck source=functions.sh.in
+source "@functions_path@"
+
 # shellcheck source=/dev/null
-source "@env_file_path@"
+source "$EFIMIRROR_CONFIG_PATH"
 
 test -v MOUNT_OPTS
 test -v MOUNT_BASE
 
 generator_dir="$1"
+early_generator_dir="$2"
 
 print() {
   echo "efimirror-generator:" "$@" >> /dev/kmsg
 }
 
-find_efi_partitions() {
-  local line props found=0 pt
-  while read -r line; do
-    # lsblk output is properly shell quoted
-    declare -a "props=($line)" || continue
-    declare "${props[@]}" || continue
-    [ "${FSTYPE:-}" = vfat ] || continue
-    pt="${PARTTYPE:-}"
-    [ "${pt,,}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ] || continue
-    [ -n "${PARTUUID:-}" ] || continue
-    echo "$PARTUUID"
-    found=1
-  done < <(lsblk -o FSTYPE,PARTTYPE,PARTUUID --pairs --shell)
-
-  if [ $found != 1 ]; then
-    return 1
-  fi
-  return 0
-}
-
-efibootmgr_parse_dev_partuuid() {
-  if [[ "$1" =~ HD\([0-9]+,GPT,([[:xdigit:]-]+),.*\) ]]; then
-    echo "${BASH_REMATCH[1]}"
-  else
-    return 1
-  fi
-}
-
-efibootmgr_get_current_boot_dev_partuuid() {
-  local line boot_current elm partuuid
-  while read -r line; do
-    elm="${line#'BootCurrent: '}"
-    [ "$elm" != "$line" ] || return 1
-    boot_current="$elm"
-
-    while read -r line; do
-      elm="${line#"Boot${boot_current}"}"
-      [ "$elm" != "$line" ] || continue
-      if partuuid=$(efibootmgr_parse_dev_partuuid "$elm"); then
-        echo "$partuuid"
-        return 0
-      else
-        return 1
-      fi
-    done
-  done < <(efibootmgr)
-
-  return 1
-}
-
-if ! read -r -a efi_partitions < <(find_efi_partitions | sort -u); then
+if ! read -r -a efi_partitions < <(get_efi_partitions | sort -u); then
   print "Error: no EFI partitions found, exiting"
   exit 1
 fi
@@ -78,7 +32,7 @@ done
 if ! cur_efi_partuuid=$(efibootmgr_get_current_boot_dev_partuuid); then
   print "Warning: failed to determine current boot partition. picking from available boot partitions instead"
   cur_efi_partuuid="${efi_partitions[0]}"
-if ! [[ "${efi_partitions[*]}" == *"$cur_efi_partuuid"* ]]; then
+elif ! [[ "${efi_partitions[*]}" == *"$cur_efi_partuuid"* ]]; then
   print "Warning: current boot partition ${cur_efi_partuuid} not found, picking from available boot partitions instead"
   cur_efi_partuuid="${efi_partitions[0]}"
 else
@@ -131,7 +85,7 @@ for partuuid in "${efi_partitions[@]}"; do
   (cd "$generator_dir/local-fs.target.requires"; ln -s "../${mount_unit_name}.mount" .)
 
   if [[ "$partuuid" == "$cur_efi_partuuid" ]]; then
-    cat > "${generator_dir}/${boot_efi_unit_name}.mount" <<EOF
+    cat > "${early_generator_dir}/${boot_efi_unit_name}.mount" <<EOF
 [Mount]
 What=$mount_path
 Where=@boot_efi_dir@

@@ -11,7 +11,7 @@ repos:
     rev: v0.9.0
     hooks:
       - id: shellcheck
-        args: ['--external-sources']
+        args: ['--external-sources', '--source-path=src']
         verbose: true
   - repo: https://github.com/inknos/pre-commit-rpmlint
     rev: v0.0.1

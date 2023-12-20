@@ -1,0 +1,103 @@
+#!/bin/bash
+
+export EFIMIRROR_CONFIG_DIR="@config_path@"
+export EFIMIRROR_CONFIG_PATH="${EFIMIRROR_CONFIG_DIR}/config"
+export EFIMIRROR_PART_CONFIG_PATH="${EFIMIRROR_CONFIG_DIR}/partitions"
+
+UUID_PATTERN='^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$'
+
+find_system_efi_partitions() {
+  local line props found=0 pt
+  while read -r line; do
+    # lsblk output is properly shell quoted
+    declare -a "props=($line)" || continue
+    declare "${props[@]}" || continue
+    [ "${FSTYPE:-}" = vfat ] || continue
+    pt="${PARTTYPE:-}"
+    [ "${pt,,}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ] || continue
+    [ -n "${PARTUUID:-}" ] || continue
+    echo "$PARTUUID"
+    found=1
+  done < <(lsblk -o FSTYPE,PARTTYPE,PARTUUID --pairs --shell)
+
+  if [ $found != 1 ]; then
+    return 1
+  fi
+  return 0
+}
+
+get_configured_efi_partitions() {
+  local line partuuid
+  if ! [ -f "${EFIMIRROR_PART_CONFIG}" ]; then
+    return 0
+  fi
+
+  local ret=1
+  while read -r line; do
+    if [[ "$line" =~ ^\# ]]; then
+      continue
+    elif [[ "$line" =~ $UUID_PATTERN ]]; then
+      ret=0
+      echo "$line"
+    fi
+  done < "$EFIMIRROR_PART_CONFIG"
+
+  return "$ret"
+}
+
+intersect_arrays() {
+  local __a="$1[*]" __b="$2[*]"
+  comm -12 <(IFS=$'\n'; echo "${!__a}") <(IFS=$'\n'; echo "${!__b}")
+}
+
+get_efi_partitions() {
+  local -a system_efi_partitions user_efi_partitions existing_partitions
+  local current_efi_partition
+
+  # The current EFI partition is always include. Then, we include all enrolled partitions
+  # that we find exist
+
+  readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u)
+  readarray -t user_efi_partitions < <(get_configured_efi_partitions | sort -u)
+  readarray -t existing_partitions < <(intersect_arrays system_efi_partitions user_efi_partitions)
+
+  : "${#system_efi_partitions[@]}" "${#user_efi_partitions[@]}" # satisfy shellcheck
+
+
+  if current_efi_partition=$(efibootmgr_get_current_boot_dev_partuuid); then
+    echo "$current_efi_partition"
+    sort -u | grep -vF "$current_efi_partition" < <(IFS=$'\n'; echo "${existing_partitions[*]}")
+  else
+    sort -u < <(IFS=$'\n'; echo "${existing_partitions[*]}")
+  fi
+}
+
+efibootmgr_parse_dev_partuuid() {
+  if [[ "$1" =~ HD\([0-9]+,GPT,([[:xdigit:]-]+),.*\) ]]; then
+    echo "${BASH_REMATCH[1]}"
+  else
+    return 1
+  fi
+}
+
+efibootmgr_get_current_boot_dev_partuuid() {
+  local line boot_current elm partuuid
+  while read -r line; do
+    elm="${line#'BootCurrent: '}"
+    [ "$elm" != "$line" ] || return 1
+    boot_current="$elm"
+
+    while read -r line; do
+      elm="${line#"Boot${boot_current}"}"
+      [ "$elm" != "$line" ] || continue
+      if partuuid=$(efibootmgr_parse_dev_partuuid "$elm"); then
+        echo "$partuuid"
+        return 0
+      else
+        return 1
+      fi
+    done
+  done < <(efibootmgr)
+
+  return 1
+}
