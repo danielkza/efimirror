@@ -13,7 +13,12 @@ Summary:        EFI Partition Redundancy
 License:        GPL-2.0
 
 URL:            %{forgeurl}
+%if "%{?_project}" == ""
 Source0:        %{forgesource}
+%else
+Source0: %{name}-%{version}.tar.gz
+%endif
+
 
 BuildRequires: meson
 BuildRequires: systemd-rpm-macros
@@ -42,8 +47,15 @@ EFI Partition Redundancy
 
 %check
 
-%post -p /sbin/ldconfig
-%postun -p /sbin/ldconfig
+%post
+systemctl daemon-reload
+systemctl start local-fs.target
+
+%postun
+if [ $1 == 0 ]; then
+  systemctl daemon-reload
+  systemctl reset-failed
+fi
 
 %files
 %license LICENSE
