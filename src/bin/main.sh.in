@@ -67,7 +67,7 @@ unenroll)
     exit 0
   fi
 
-  tmp_config=$(mktemp -d "$(dirname "$EFIMIRROR_PART_CONFIG_PATH")")
+  tmp_config=$(mktemp -p "$(dirname "$EFIMIRROR_PART_CONFIG_PATH")")
   for cur_partuuid in "${user_efi_partitions[@]}"; do
     [ "$cur_partuuid" != "$partuuid" ] || continue
     echo "$cur_partuuid"
