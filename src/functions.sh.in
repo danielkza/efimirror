@@ -124,8 +124,9 @@ efibootmgr_get_primary_boot_devs_partuuids() {
 }
 
 print() {
+  # Generators need to write to kmsg
   if [ "${SYSTEMD_SCOPE:-}" = system ]; then
-    echo "efimirror-generator:" "$@" >> /dev/kmsg
+    echo "@generator_exe_name@:" "$@" >> /dev/kmsg
   else
     echo "$@" >&2
   fi
