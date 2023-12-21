@@ -65,7 +65,7 @@ for partuuid in "${efi_partitions[@]}"; do
 
   dev_path="/dev/disk/by-partuuid/${partuuid}"
 
-  partuuid_unit_name=$(systemd-escape --path "$partuuid")
+  partuuid_unit_name=$(systemd-escape "$partuuid")
 
   (cd "$generator_dir/local-fs.target.requires"; ln -s "../${mount_unit_name}.mount" .)
 
