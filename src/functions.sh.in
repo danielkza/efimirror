@@ -4,21 +4,33 @@ export EFIMIRROR_CONFIG_DIR="@config_path@"
 export EFIMIRROR_CONFIG_PATH="${EFIMIRROR_CONFIG_DIR}/config"
 export EFIMIRROR_PART_CONFIG_PATH="${EFIMIRROR_CONFIG_DIR}/partitions"
 
+UEFI_PART_TYPE="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
 UUID_PATTERN='^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$'
 
 find_system_efi_partitions() {
   local line props found=0 pt
+
+  # In early boot, lsblk can return empty tags, so we can't use it directly :(
+  # Grab initial list of candidates from blkid first
+
+  blkid -g || :
+
+  local -a vfat_devs
+  if ! readarray -t vfat_devs < <(blkid -t TYPE=vfat -s DEVNAME -o value); then
+    return 1
+  fi
+
+  # Then actually pass them to lsblk and hope it does the right thing
   while read -r line; do
     # lsblk output is properly shell quoted
     declare -a "props=($line)" || continue
     declare "${props[@]}" || continue
-    [ "${FSTYPE:-}" = vfat ] || continue
     pt="${PARTTYPE:-}"
-    [ "${pt,,}" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ] || continue
+    [ "${pt,,}" = "$UEFI_PART_TYPE" ] || continue
     [ -n "${PARTUUID:-}" ] || continue
     echo "$PARTUUID"
     found=1
-  done < <(lsblk -o FSTYPE,PARTTYPE,PARTUUID --pairs --shell)
+  done < <(lsblk -o PARTTYPE,PARTUUID --pairs --shell "${vfat_devs[@]}")
 
   if [ $found != 1 ]; then
     return 1
@@ -83,9 +95,32 @@ efibootmgr_get_bootnum() {
   return 1
 }
 
+systemd_bootloader_vendor_id='4a67b082-0a4c-41cf-b6c7-440b29bb8c4f'
+systemd_bootloader_efivar_name="LoaderDevicePartUUID-${systemd_bootloader_vendor_id}"
+
+systemd_get_bootloader_partuuid() {
+  local efivar_path="/sys/firwmare/efi/efivars/${systemd_bootloader_efivar_name}"
+  local partuuid
+  if [ -e "$efivar_path" ]; then
+    partuuid=$(head -c-1  "$efivar_path" | iconv -f utf16 -t utf8)
+    if [ -e "/dev/disk/by-partuuid/${partuuid}" ]; then
+      echo "$partuuid"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 efibootmgr_get_primary_boot_devs_partuuids() {
   local efibootmgr_out
   efibootmgr_out=$(efibootmgr)
+
+  local partuuid
+  if partuuid=$(systemd_get_bootloader_partuuid); then
+    echo "$partuuid"
+    return 0
+  fi
 
   local line boot_current='' boot_default=''
   while read -r line; do
@@ -105,7 +140,7 @@ efibootmgr_get_primary_boot_devs_partuuids() {
     fi
   done <<< "$efibootmgr_out"
 
-  local boot_info partuuid
+  local boot_info
   if [ -n "$boot_current" ]; then
     if boot_info=$(efibootmgr_get_bootnum "$boot_current" <<< "$efibootmgr_out"); then
       partuuid=$(efibootmgr_parse_dev_partuuid "$boot_info")
