@@ -8,80 +8,106 @@ UEFI_PART_TYPE="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
 UUID_PATTERN='^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$'
 
 find_system_efi_partitions() {
-  local line props found=0 pt
+  # shellcheck disable=SC2178
+  local -n results="$1"
+  results=()
+
+  local line
 
   # In early boot, lsblk can return empty tags, so we can't use it directly :(
-  # Grab initial list of candidates from blkid first
-
-  blkid -g || :
-
+  # Instead, grab initial list of candidates from blkid first, then call
   local -a vfat_devs
   readarray -t vfat_devs < <(blkid -t TYPE=vfat -o device)
   if [ "${#vfat_devs[@]}" -eq 0 ]; then
     return 1
   fi
 
-  # Then actually pass them to lsblk and hope it does the right thing
-  while read -r line; do
-    # lsblk output is properly shell quoted
-    declare -a "props=($line)" || continue
-    declare "${props[@]}" || continue
-    pt="${PARTTYPE:-}"
-    [ "${pt,,}" = "$UEFI_PART_TYPE" ] || continue
-    [ -n "${PARTUUID:-}" ] || continue
-    echo "$PARTUUID"
-    found=1
-  done < <(lsblk -o PARTTYPE,PARTUUID --pairs --shell "${vfat_devs[@]}")
+  # Then probe blkid individually to get more information
+  local dev parttype partuuid
+  for dev in "${vfat_devs[@]}"; do
+    parttype=
+    partuuid=
+    while read -r line; do
+      if [[ "$line" =~ ^ID_PART_ENTRY_TYPE=(.+) ]]; then
+        parttype="${BASH_REMATCH[1]}"
+        continue
+      elif [[ "$line" =~ ^ID_PART_ENTRY_UUID=(.+) ]]; then
+        partuuid="${BASH_REMATCH[1]}"
+        continue
+      fi
+    done < <(blkid -p -o udev "$dev")
 
-  if [ $found != 1 ]; then
+    if [[ -z "$partuuid" || "$parttype" != "$UEFI_PART_TYPE" ]]; then
+      continue
+    fi
+
+    results+=("$partuuid")
+  done
+
+  if [ "${#results[@]}" -eq 0 ]; then
     return 1
   fi
   return 0
 }
 
 get_configured_efi_partitions() {
+  # shellcheck disable=SC2178
+  local -n results="$1"
+  results=()
+
   local line partuuid
   if ! [ -f "${EFIMIRROR_PART_CONFIG_PATH}" ]; then
     return 1
   fi
 
-  local ret=1
   while read -r line; do
     if [[ "$line" =~ ^\# ]]; then
       continue
     elif [[ "$line" =~ $UUID_PATTERN ]]; then
-      ret=0
-      echo "$line"
+      results+=("$line")
     fi
   done < "$EFIMIRROR_PART_CONFIG_PATH"
 
-  return "$ret"
+  if [ "${#results[@]}" -eq 0 ]; then
+    return 1
+  fi
+
+  return 0
 }
 
 intersect_arrays() {
-  local __a="$1[*]" __b="$2[*]" __c="$3"
+  # shellcheck disable=SC2178
+  local -n a="$1" b="$2" c="$3"
 
-  readarray -t "$__c" < <(comm -12 <(IFS=$'\n'; echo "${!__a}") <(IFS=$'\n'; echo "${!__b}"))
+  # shellcheck disable=SC2034
+  readarray -t c < <(
+    comm -12 \
+      <(IFS=$'\n'; echo "${a[*]}" | sort -u) \
+      <(IFS=$'\n'; echo "${b[*]}" | sort -u)
+  )
 }
 
 get_efi_partitions() {
-  local -a system_efi_partitions user_efi_partitions existing_partitions
+  # shellcheck disable=SC2178
+  local -n results="$1"
+  results=()
+
+  local -a system_efi_partitions user_efi_partitions
 
   # The current EFI partition is always included. Then, we include all enrolled partitions
   # that we find exist
 
-  readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u)
-  readarray -t user_efi_partitions < <(get_configured_efi_partitions | sort -u)
+  declare -a system_efi_partitions
+  find_system_efi_partitions system_efi_partitions
+  declare -a user_efi_partitions
+  get_configured_efi_partitions user_efi_partitions
 
   : "${#system_efi_partitions[@]}" "${#user_efi_partitions[@]}" # satisfy shellcheck
 
-  local -a existing_partitions
-  intersect_arrays system_efi_partitions user_efi_partitions existing_partitions
-  if [ "${#existing_partitions[@]}" -eq 0 ]; then
+  intersect_arrays system_efi_partitions user_efi_partitions results
+  if [ "${#results[@]}" -eq 0 ]; then
     return 1
   fi
-
-  (IFS=$'\n'; echo "${existing_partitions[*]}")
 }
 
 efibootmgr_parse_dev_partuuid() {
