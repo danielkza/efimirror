@@ -86,12 +86,17 @@ status)
   fi
 
   if ! readarray -t efi_partitions < <(get_efi_partitions | sort -u); then
-    print "Error: no EFI partitions found, exiting"
-    exit 1
+    print "No EFI partitions actively managed"
+  else
+    echo "* Partition information:"
+    # this prints status to stderr
+    get_primary_efi_partition "${efi_partitions[@]}" > /dev/null
   fi
 
-  # this prints status to stderr
-  get_primary_efi_partition "${efi_partitions[@]}" > /dev/null
+  mount_unit_prefix=$(systemd-escape --path "$MOUNT_BASE")
+  echo "* Unit Status:"
+  systemctl status 'efimirror@*' "${mount_unit_prefix}"'-*.mount' --no-pager --lines 0
+
   exit 0
 ;;
 list-system-partitions)
