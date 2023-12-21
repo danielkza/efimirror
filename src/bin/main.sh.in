@@ -74,7 +74,8 @@ unenroll)
   done > "$tmp_config"
 
   mv "$tmp_config" "$EFIMIRROR_PART_CONFIG_PATH"
-  systemctl stop "efimirror@${partuuid}" || :
+  mount_dir="$MOUNT_BASE/${partuuid}"
+  systemctl stop "$mount_dir" || :
   apply_changes
 ;;
 status)
