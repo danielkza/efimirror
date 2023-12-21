@@ -16,7 +16,8 @@ find_system_efi_partitions() {
   blkid -g || :
 
   local -a vfat_devs
-  if ! readarray -t vfat_devs < <(blkid -t TYPE=vfat -s DEVNAME -o value); then
+  readarray -t vfat_devs < <(blkid -t TYPE=vfat -o device)
+  if [ "${#vfat_devs[@]}" -eq 0 ]; then
     return 1
   fi
 

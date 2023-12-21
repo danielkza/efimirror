@@ -1,7 +1,5 @@
 #!/bin/bash
 
-exec 2> /dev/kmsg
-
 set -eu -o pipefail
 set -x
 
@@ -19,7 +17,9 @@ test -v MOUNT_BASE
 generator_dir="$1"
 early_generator_dir="$2"
 
-if ! readarray -t efi_partitions < <(get_efi_partitions); then
+if ! readarray -t efi_partitions < <(get_efi_partitions) || \
+    [ "${#efi_partitions[@]}" -eq 0 ]
+then
   print "Error: no EFI partitions found, exiting"
   exit 1
 fi

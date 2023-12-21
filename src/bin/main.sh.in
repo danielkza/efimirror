@@ -79,7 +79,9 @@ status)
     exit 1
   fi
 
-  if ! readarray -t efi_partitions < <(get_efi_partitions | sort -u); then
+  if ! readarray -t efi_partitions < <(get_efi_partitions | sort -u) || \
+      [ "${#efi_partitions[@]}" -eq 0 ]
+  then
     print "No EFI partitions actively managed"
   else
     echo "* Partition information:"
@@ -99,7 +101,9 @@ list-system-partitions)
     exit 1
   fi
 
-  if ! readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u); then
+  if ! readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u) || \
+    [ "${#system_efi_partitions[@]}" -eq 0 ]
+  then
     print "Error: no EFI partitions found, exiting"
     exit 1
   fi
