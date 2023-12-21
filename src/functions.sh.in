@@ -59,8 +59,9 @@ get_configured_efi_partitions() {
 }
 
 intersect_arrays() {
-  local __a="$1[*]" __b="$2[*]"
-  comm -12 <(IFS=$'\n'; echo "${!__a}") <(IFS=$'\n'; echo "${!__b}")
+  local __a="$1[*]" __b="$2[*]" __c="$3"
+
+  readarray -t "$__c" < <(comm -12 <(IFS=$'\n'; echo "${!__a}") <(IFS=$'\n'; echo "${!__b}"))
 }
 
 get_efi_partitions() {
@@ -71,11 +72,16 @@ get_efi_partitions() {
 
   readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u)
   readarray -t user_efi_partitions < <(get_configured_efi_partitions | sort -u)
-  readarray -t existing_partitions < <(intersect_arrays system_efi_partitions user_efi_partitions)
 
   : "${#system_efi_partitions[@]}" "${#user_efi_partitions[@]}" # satisfy shellcheck
 
-  sort -u < <(IFS=$'\n'; echo "${existing_partitions[*]}")
+  local -a existing_partitions
+  intersect_arrays system_efi_partitions user_efi_partitions existing_partitions
+  if [ "${#existing_partitions[@]}" -eq 0 ]; then
+    return 1
+  fi
+
+  (IFS=$'\n'; echo "${existing_partitions[*]}")
 }
 
 efibootmgr_parse_dev_partuuid() {
