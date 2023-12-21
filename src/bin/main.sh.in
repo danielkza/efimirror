@@ -13,8 +13,9 @@ shift || :
 
 usage() {
   echo "Usage: $0 enroll <part-uuid>|current" >&2
-  echo "Usage: $0 unenroll <part-uuid>" >&2
-  echo "Usage: $0 status" >&2
+  echo "       $0 unenroll <part-uuid>" >&2
+  echo "       $0 status" >&2
+  echo "       $0 list-system-partitions" >&2
 }
 
 apply_changes() {
@@ -89,8 +90,25 @@ status)
     exit 1
   fi
 
-  get_primary_efi_partition "${efi_partitions[@]}" # this prints status
+  # this prints status to stderr
+  get_primary_efi_partition "${efi_partitions[@]}" > /dev/null
   exit 0
+;;
+list-system-partitions)
+  if [ $# -ne 0 ]; then
+    usage
+    exit 1
+  fi
+
+  if ! readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u); then
+    print "Error: no EFI partitions found, exiting"
+    exit 1
+  fi
+
+  for partuuid in "${system_efi_partitions[@]}"; do
+    canonical_disk=$(realpath "$partuuid" 2>/dev/null || echo "/dev/disk/by-partuuid/$partuuid")
+    echo "$canonical_disk"$'\t'"$partuuid"
+  done
 ;;
 *)
   usage
