@@ -110,7 +110,7 @@ print() {
   fi
 }
 
-print_status() {
+get_primary_efi_partition() {
   local partuuid cur_efi_partuuid
   local -a efi_partitions=("$@")
 
@@ -129,4 +129,5 @@ print_status() {
   fi
 
   print "Selected Default EFI partition: $cur_efi_partuuid"
+  echo "$cur_efi_partuuid"
 }

@@ -87,7 +87,7 @@ status)
     exit 1
   fi
 
-  print_status "${efi_partitions[@]}"
+  get_primary_efi_partition "${efi_partitions[@]}" # this prints status
   exit 0
 ;;
 *)
