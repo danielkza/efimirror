@@ -52,9 +52,8 @@ intersect_arrays() {
 
 get_efi_partitions() {
   local -a system_efi_partitions user_efi_partitions existing_partitions
-  local current_efi_partition
 
-  # The current EFI partition is always include. Then, we include all enrolled partitions
+  # The current EFI partition is always included. Then, we include all enrolled partitions
   # that we find exist
 
   readarray -t system_efi_partitions < <(find_system_efi_partitions | sort -u)
@@ -63,13 +62,7 @@ get_efi_partitions() {
 
   : "${#system_efi_partitions[@]}" "${#user_efi_partitions[@]}" # satisfy shellcheck
 
-
-  if current_efi_partition=$(efibootmgr_get_current_boot_dev_partuuid); then
-    echo "$current_efi_partition"
-    sort -u | grep -vF "$current_efi_partition" < <(IFS=$'\n'; echo "${existing_partitions[*]}")
-  else
-    sort -u < <(IFS=$'\n'; echo "${existing_partitions[*]}")
-  fi
+  sort -u < <(IFS=$'\n'; echo "${existing_partitions[*]}")
 }
 
 efibootmgr_parse_dev_partuuid() {
@@ -80,26 +73,54 @@ efibootmgr_parse_dev_partuuid() {
   fi
 }
 
-efibootmgr_get_current_boot_dev_partuuid() {
-  local line boot_current elm partuuid
+efibootmgr_get_bootnum() {
   while read -r line; do
-    elm="${line#'BootCurrent: '}"
-    [ "$elm" != "$line" ] || return 1
-    boot_current="$elm"
-
-    while read -r line; do
-      elm="${line#"Boot${boot_current}"}"
-      [ "$elm" != "$line" ] || continue
-      if partuuid=$(efibootmgr_parse_dev_partuuid "$elm"); then
-        echo "$partuuid"
-        return 0
-      else
-        return 1
-      fi
-    done
-  done < <(efibootmgr)
-
+    if [[ "$line" =~ ^Boot"$1"'*'? ]]; then
+      echo "$line"
+      return 0
+    fi
+  done
   return 1
+}
+
+efibootmgr_get_primary_boot_devs_partuuids() {
+  local efibootmgr_out
+  efibootmgr_out=$(efibootmgr)
+
+  local line boot_current='' boot_default=''
+  while read -r line; do
+    if [ -z "$boot_current" ]; then
+      if [[ "$line" =~ BootCurrent:[[:blank:]]([0-9]+) ]]; then
+        boot_current="${BASH_REMATCH[1]}"
+      fi
+      continue
+    fi
+
+    if [ -z "$boot_default" ]; then
+      if [[ "$line" =~ BootOrder:[[:blank:]]([0-9]+) ]]; then
+        boot_default="${BASH_REMATCH[1]}"
+        break
+      fi
+      continue
+    fi
+  done <<< "$efibootmgr_out"
+
+  local boot_info partuuid
+  if [ -n "$boot_current" ]; then
+    if boot_info=$(efibootmgr_get_bootnum "$boot_current" <<< "$efibootmgr_out"); then
+      partuuid=$(efibootmgr_parse_dev_partuuid "$boot_info")
+      print "Primary EFI partition (from BootCurrent): ${partuuid}"
+      echo "$partuuid"
+    fi
+  fi
+
+  if [[ -n "$boot_default" ]]; then
+    if boot_info=$(efibootmgr_get_bootnum "$boot_default" <<< "$efibootmgr_out"); then
+      partuuid=$(efibootmgr_parse_dev_partuuid "$boot_info")
+      print "Primary EFI partition (from BootOrder): ${partuuid}"
+      echo "$partuuid"
+    fi
+  fi
 }
 
 print() {
@@ -111,23 +132,31 @@ print() {
 }
 
 get_primary_efi_partition() {
-  local partuuid cur_efi_partuuid
   local -a efi_partitions=("$@")
+  local partuuid
 
   for partuuid in "${efi_partitions[@]}"; do
     print "EFI partition: $partuuid"
   done
 
-  if ! cur_efi_partuuid=$(efibootmgr_get_current_boot_dev_partuuid); then
-    print "Warning: failed to determine current boot partition. picking from available boot partitions instead"
-    cur_efi_partuuid="${efi_partitions[0]}"
-  elif ! [[ "${efi_partitions[*]}" == *"$cur_efi_partuuid"* ]]; then
-    print "Warning: current boot partition ${cur_efi_partuuid} not found, picking from available boot partitions instead"
-    cur_efi_partuuid="${efi_partitions[0]}"
-  else
-    print "Active current EFI partition: $cur_efi_partuuid"
+  local -a candidate_partuuids
+  local primary_partuuid
+
+  readarray -t candidate_partuuids < <(efibootmgr_get_primary_boot_devs_partuuids)
+  for partuuid in "${candidate_partuuids[@]}"; do
+    if [[ "${efi_partitions[*]}" == *"$partuuid"* ]]; then
+      primary_partuuid="$partuuid"
+      break
+    fi
+
+    print "Warning: candidate primary EFI partition ${partuuid} not enrolled or unavailable"
+  done
+
+  if [ -z "$primary_partuuid" ]; then
+    print "Warning: no EFI partitions from boot data available, picking first of available partitions"
+    primary_partuuid="${efi_partitions[0]}"
   fi
 
-  print "Selected Default EFI partition: $cur_efi_partuuid"
-  echo "$cur_efi_partuuid"
+  print "Primary EFI partition: $primary_partuuid"
+  echo "$primary_partuuid"
 }
