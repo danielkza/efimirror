@@ -72,7 +72,9 @@ fi
 %files
 %license LICENSE
 %doc README.md
-%{_bindir}//*
-%{_libexecdir}/%{pkgname}/*
+%{_bindir}/*
+%{_libexecdir}/%{pkgname}/
 %{_systemdgeneratordir}/*
-%config(noreplace) %{_sysconfdir}/%{pkgname}/*
+%dir %{_sysconfdir}/%{pkgname}
+%config(noreplace) %{_sysconfdir}/%{pkgname}/partitions
+%config(noreplace) %{_sysconfdir}/%{pkgname}/config
