@@ -37,3 +37,4 @@ packagecache
 *.rpm
 *.deb
 *.tar.gz
+/obj*/
