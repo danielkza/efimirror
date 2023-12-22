@@ -41,7 +41,7 @@ Requires: systemd >= 249
 Requires: efibootmgr
 Requires: bash
 Requires: util-linux
-Requires: iconv
+Requires: /usr/bin/iconv
 
 BuildArch: noarch
 
