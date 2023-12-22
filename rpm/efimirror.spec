@@ -33,6 +33,8 @@ Source0: %{repourl}/archive/%{gitref}/%{archivename}.tar.gz
 
 BuildRequires: meson
 BuildRequires: systemd-rpm-macros
+# to satisfy complaints of unowned generator dir
+BuildRequires: systemd
 
 Requires: lsyncd
 Requires: systemd >= 249
