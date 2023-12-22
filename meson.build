@@ -65,3 +65,5 @@ conf_conf_data = configuration_data({
 configure_file(input: 'src/conf/efimirror.in',
   output: 'config', install_dir: conf_dir, install_mode: 'rw-r--r--',
   configuration: conf_conf_data)
+
+install_data(sources: 'src/conf/partitions', install_dir: conf_dir)
