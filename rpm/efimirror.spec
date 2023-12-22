@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           %{pkgname}
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        EFI Partition Redundancy
 License:        GPL-2.0
