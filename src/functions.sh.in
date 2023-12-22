@@ -12,18 +12,19 @@ find_system_efi_partitions() {
   local -n results="$1"
   results=()
 
-  local line
+  # In early boot, lsblk can return empty tags due to udev data being unavailable,
+  # so we can't use it. Instead, we need to use blkid for probing the disks directly
+  # after an initial round of justing finding good candidates (FAT32 partitions).
+  # We can maybe change it if lsblk one day lets us manually disable udev-based
+  # probing.
 
-  # In early boot, lsblk can return empty tags, so we can't use it directly :(
-  # Instead, grab initial list of candidates from blkid first, then call
   local -a vfat_devs
   readarray -t vfat_devs < <(blkid -t TYPE=vfat -o device)
   if [ "${#vfat_devs[@]}" -eq 0 ]; then
     return 1
   fi
 
-  # Then probe blkid individually to get more information
-  local dev parttype partuuid
+  local dev line parttype partuuid
   for dev in "${vfat_devs[@]}"; do
     parttype=
     partuuid=
@@ -35,7 +36,7 @@ find_system_efi_partitions() {
         partuuid="${BASH_REMATCH[1]}"
         continue
       fi
-    done < <(blkid -p -o udev "$dev")
+    done < <(blkid -p -o udev "$dev") # only udev output format includes parttype
 
     if [[ -z "$partuuid" || "$parttype" != "$UEFI_PART_TYPE" ]]; then
       continue
@@ -92,14 +93,9 @@ get_efi_partitions() {
   local -n results="$1"
   results=()
 
-  local -a system_efi_partitions user_efi_partitions
-
-  # The current EFI partition is always included. Then, we include all enrolled partitions
-  # that we find exist
-
-  declare -a system_efi_partitions
+  local -a system_efi_partitions
   find_system_efi_partitions system_efi_partitions
-  declare -a user_efi_partitions
+  local -a user_efi_partitions
   get_configured_efi_partitions user_efi_partitions
 
   : "${#system_efi_partitions[@]}" "${#user_efi_partitions[@]}" # satisfy shellcheck
@@ -135,6 +131,7 @@ systemd_get_bootloader_partuuid() {
   local efivar_path="/sys/firwmare/efi/efivars/${systemd_bootloader_efivar_name}"
   local partuuid
   if [ -e "$efivar_path" ]; then
+    # Trim trailing NUL, convert from UTF-16
     partuuid=$(head -c-1  "$efivar_path" | iconv -f utf16 -t utf8)
     if [ -e "/dev/disk/by-partuuid/${partuuid}" ]; then
       echo "$partuuid"
@@ -147,7 +144,7 @@ systemd_get_bootloader_partuuid() {
 
 efibootmgr_get_primary_boot_devs_partuuids() {
   local efibootmgr_out
-  efibootmgr_out=$(efibootmgr)
+  efibootmgr_out=$(efibootmgr) || return 1
 
   local partuuid
   if partuuid=$(systemd_get_bootloader_partuuid); then
@@ -169,7 +166,6 @@ efibootmgr_get_primary_boot_devs_partuuids() {
         boot_default="${BASH_REMATCH[1]}"
         break
       fi
-      continue
     fi
   done <<< "$efibootmgr_out"
 
@@ -201,17 +197,17 @@ print() {
 }
 
 get_primary_efi_partition() {
-  local -a efi_partitions=("$@")
-  local partuuid
+  local -n efi_partitions="$1"
 
+  local partuuid
   for partuuid in "${efi_partitions[@]}"; do
     print "EFI partition: $partuuid"
   done
 
   local -a candidate_partuuids
-  local primary_partuuid
-
   readarray -t candidate_partuuids < <(efibootmgr_get_primary_boot_devs_partuuids)
+
+  local primary_partuuid
   for partuuid in "${candidate_partuuids[@]}"; do
     if [[ "${efi_partitions[*]}" == *"$partuuid"* ]]; then
       primary_partuuid="$partuuid"

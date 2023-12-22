@@ -38,6 +38,8 @@ Requires: lsyncd
 Requires: systemd >= 249
 Requires: efibootmgr
 Requires: bash
+Requires: util-linux
+Requires: iconv
 
 BuildArch: noarch
 

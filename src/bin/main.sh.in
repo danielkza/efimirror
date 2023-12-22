@@ -88,7 +88,7 @@ status)
   else
     echo "* Partition information:"
     # this prints status to stderr
-    get_primary_efi_partition "${efi_partitions[@]}" > /dev/null
+    get_primary_efi_partition efi_partitions > /dev/null
   fi
 
   mount_unit_prefix=$(systemd-escape --path "$MOUNT_BASE")

@@ -23,7 +23,7 @@ if ! get_efi_partitions efi_partitions; then
   exit 1
 fi
 
-cur_efi_partuuid=$(get_primary_efi_partition "${efi_partitions[@]}")
+cur_efi_partuuid=$(get_primary_efi_partition efi_partitions)
 
 mkdir -p "${generator_dir}/local-fs.target.requires"
 
